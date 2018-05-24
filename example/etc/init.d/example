@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+command='/opt/example/example.py'
+command_args=''
+command_background=1
+command_user='example'
+pidfile='/run/example.pid'
+
+depend() {
+	need net localmount
+	after bootmisc
+}
+
+start_pre() {
+	checkpath -d -o example /opt/example
+	checkpath -f -o example /opt/example/example.py
+}

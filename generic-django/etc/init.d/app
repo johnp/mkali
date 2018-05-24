@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+command='python3 /opt/app/manage.py runserver 0.0.0.0:8000'
+command_args=''
+command_background=1
+command_user='django-app'
+pidfile='/run/django-app.pid'
+
+depend() {
+	need net localmount
+	after bootmisc
+}
+
+start_pre() {
+	checkpath -d -o django-app /opt/app
+	find /opt/app -type d -exec checkpath -d -o django-app '{}' \;
+	find /opt/app -type f -exec checkpath -f -o django-app '{}' \;
+}

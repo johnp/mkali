@@ -1,0 +1,3 @@
+# VM images
+*.raw
+*.qcow2

@@ -1,0 +1,57 @@
+#!/bin/sh
+# Make an Alpine Linux VM image (for insekta)
+# Alpine Linux OS version is set via repositories file (usually latest-stable or edge)
+set -eo pipefail
+
+: ${SCENARIO:="$1"}
+# TODO: parse input conf ($SCENARIO.conf)
+# TODO: sth overwrites $HOSTNAME, so had to resort to $HOST :/
+
+# set scenario name TODO: build from this directory! (needs new git repo)
+: ${SCENARIO:='example'}
+: ${IMAGE_FORMAT:='qcow2'}
+: ${IMAGE_SIZE:='200M'}
+: ${KERNEL_FLAVOR:='virt'}
+# add any packages you want here with a new `-p` switch
+# TODO: parse $SCENARIO/packages file
+: ${PACKAGE_ARGS:='-p python3 -p py3-django -p bind-tools -p net-tools'}
+: ${OUTPUT:="$SCENARIO.$IMAGE_FORMAT"}
+# set root password and hostname
+: ${PASSWORD='password'}
+: ${HOST="$SCENARIO-scenario"}
+
+# alpine-make-vm-image re-downloads the tools *every time* -.-
+# so let's at least re-use them in /tmp
+# TODO: upstream this (maybe combined with apk cache)
+: ${APK_TOOLS_URI:="https://github.com/alpinelinux/apk-tools/releases/download/v2.9.1/apk-tools-2.9.1-x86_64-linux.tar.gz"}
+: ${APK_TOOLS_SHA256:="a0546d814a85fcc94a6e560360c4f1997119e40d79d9bc818f1571b2cf2ea5e9"}
+: ${APK:="/tmp/apk-tools/apk"}
+APK_DIR=$(dirname "$APK")
+# TODO: version check apk binary
+# TODO: somehow this isn't reliable
+echo 'Checking apk-tools...'
+if [ ! -f "$APK" ]; then
+    echo 'Downloading static apk binary...'
+    OLDWD=$(pwd)
+    mkdir -p "$APK_DIR" && cd "$APK_DIR" \
+	  && wget --no-verbose "$APK_TOOLS_URI" \
+	  && echo "$APK_TOOLS_SHA256  ${APK_TOOLS_URI##*/}" | sha256sum -c \
+	  && tar --strip-components=1 -xzf "${APK_TOOLS_URI##*/}" \
+	  && rm "${APK_TOOLS_URI##*/}"
+    cd "$OLDWD"
+fi
+
+# also, let's cache the packages like mkosi.cache
+: ${APK_CACHE:="./mkali.cache"}
+sudo mkdir -p $APK_CACHE
+# sudo required for nbd mounts :/
+# TODO: upstream `--no-root` option with libguestfs
+sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
+	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
+	-r "$SCENARIO/repositories" --keys-dir "$SCENARIO/etc/apk/keys/" --script-chroot \
+	"$OUTPUT" "$SCENARIO/scenario-setup.sh" "$PASSWORD" "$HOST"
+# fix ownership for qemu
+i=$(whoami)
+sudo chown "$i":"$i" "$OUTPUT"
+
+exit 0

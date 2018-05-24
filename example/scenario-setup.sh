@@ -6,7 +6,7 @@
 : ${PASSWORD:=$1}
 : ${HOSTNAME:=$2}
 # Fallback values
-: ${PASSWORD:='changeme'}
+: ${PASSWORD:='password'}
 : ${HOST:='example-scenario'}
 
 # Initial system setup
@@ -36,7 +36,7 @@ rc-update add sshd default 2>/dev/null || true
 sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf
 # make sure to forbid password logins via dropbear
 # (openssh already has this for root by default)
-set -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-s"/' /etc/conf.d/dropbear 2>/dev/null || true
+sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-s"/' /etc/conf.d/dropbear 2>/dev/null || true
 
 rm /etc/motd
 ####################################################################

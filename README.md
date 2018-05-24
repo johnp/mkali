@@ -4,7 +4,7 @@ This project currently is just a simple wrapper around alpinelinux/alpine-make-v
 
 ## TODO
 
-[ ] Implement root-less mode via [libguestfs](https://libguestfs.org)
+- [ ] Implement root-less mode via [libguestfs](https://libguestfs.org)
    (libguestfs is not packaged for alpine yet)
-[ ] Implement [mkosi](https://github.com/systemd/mkosi) like config file parsing
-[ ] Upstream apk-tool and apk package caching
+- [ ] Implement [mkosi](https://github.com/systemd/mkosi) like config file parsing
+- [ ] Upstream apk-tool and apk package caching

@@ -1,0 +1,9 @@
+dist: trusty
+sudo: required
+language: minimal
+addons:
+  apt:
+    packages:
+      - qemu-utils
+script:
+  - ./mkali example

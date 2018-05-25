@@ -1,7 +1,7 @@
 #!/bin/sh
 # Make an Alpine Linux VM image (for insekta)
 # Alpine Linux OS version is set via repositories file (usually latest-stable or edge)
-set -eo pipefail
+set -eu
 
 : ${SCENARIO:="$1"}
 # TODO: parse input conf ($SCENARIO.conf)

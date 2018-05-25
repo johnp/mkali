@@ -16,6 +16,7 @@ set -eo pipefail
 # TODO: parse $SCENARIO/packages file
 : ${PACKAGE_ARGS:='-p python3 -p py3-django -p bind-tools -p net-tools'}
 : ${OUTPUT:="$SCENARIO.$IMAGE_FORMAT"}
+: ${POSTINST:="$SCENARIO/mkali.postinst"}
 # set root password and hostname
 : ${PASSWORD='password'}
 : ${HOST="$SCENARIO-scenario"}
@@ -49,7 +50,7 @@ sudo mkdir -p $APK_CACHE
 sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
 	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
 	-r "$SCENARIO/repositories" --keys-dir "$SCENARIO/etc/apk/keys/" --script-chroot \
-	"$OUTPUT" "$SCENARIO/scenario-setup.sh" "$PASSWORD" "$HOST"
+	"$OUTPUT" "$POSTINST" "$PASSWORD" "$HOST"
 # fix ownership for qemu
 i=$(whoami)
 sudo chown "$i":"$i" "$OUTPUT"

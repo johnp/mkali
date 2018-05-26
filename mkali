@@ -7,9 +7,8 @@ TARGET="$1"
 if [ ! -d "$TARGET" ]; then
 	echo "mkali requires a path to the configuration directory as argument"
 	exit 1
-else
-	echo "Building from $TARGET"
 fi
+echo "Building $TARGET"
 
 # source target configuration
 [ -f "$TARGET/mkali.conf" ] && . "$TARGET/mkali.conf"
@@ -34,7 +33,7 @@ fi
 : ${APK_TOOLS_SHA256:="a0546d814a85fcc94a6e560360c4f1997119e40d79d9bc818f1571b2cf2ea5e9"}
 : ${APK:="/tmp/apk-tools/apk"}
 APK_DIR=$(dirname "$APK")
-# TODO: version check apk binary
+# TODO: version/integrity check apk binary
 if ! command -v "$APK" >/dev/null; then
 	echo 'Downloading static apk-tools...'
 	OLDWD=$(pwd)
@@ -46,8 +45,8 @@ if ! command -v "$APK" >/dev/null; then
 	cd "$OLDWD"
 fi
 
-# parse $SCENARIO/packages
-PACKAGE_ARGS=$(sed -e 's/^/-p /g' "$TARGET/packages" | tr '\n' ' ')
+# convert $PACKAGES config entry to $PACKAGE_ARGS
+PACKAGE_ARGS=$(echo "$PACKAGES" | sed -e 's/\([[:space:]]\+\|^\)\(.\)/ -p \2/g')
 
 # cache the packages
 : ${APK_CACHE:="./mkali.cache"}

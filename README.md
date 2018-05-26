@@ -5,7 +5,6 @@ This project currently is just a simple wrapper around alpinelinux/alpine-make-v
 
 ## TODO
 
-- [x] Parse `$SCENARIO/packages` file (currently packages have to be added to the mkali script directly)
 - [x] Implement config file sourcing
 - [ ] Move generic postinst stuff with 'mkosi.extra'-like functionality into mkali directly, so that user provided postinst can be simpler
 - [ ] Upstream apk-tool and apk package caching

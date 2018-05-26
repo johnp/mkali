@@ -4,7 +4,7 @@
 set -eu
 
 TARGET="$1"
-if [ ! "$TARGET" ]; then
+if [ ! -d "$TARGET" ]; then
 	echo "mkali requires a path to the configuration directory as argument"
 	exit 1
 else

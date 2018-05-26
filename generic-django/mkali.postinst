@@ -34,9 +34,9 @@ rc-update add sshd default 2>/dev/null || true
 
 # shorten 3s boot delay to 0.1s
 sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf
-# make sure to forbid password logins via dropbear
-# (openssh already has this for root by default)
-sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-s"/' /etc/conf.d/dropbear 2>/dev/null || true
+# make sure to forbid password root logins via dropbear
+# (openssh already has this by default)
+sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-g"/' /etc/conf.d/dropbear 2>/dev/null || true
 
 rm /etc/motd
 ####################################################################

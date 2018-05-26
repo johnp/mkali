@@ -1,26 +1,20 @@
 #!/bin/sh
-# Setup a scenario VM. Use this with the -c/--script-chroot flag.
+# Set-up the VM.
 # This serves about the same purpose as mkosi.postinst/mkosi.extra.
-
-# Use arguments or environment variables
-: ${PASSWORD:=$1}
-: ${HOSTNAME:=$2}
-# Fallback values
-: ${PASSWORD:='password'}
-: ${HOST:='example-scenario'}
+# First argument has to be the root password, second argument has to be the hostname.
 
 # Initial system setup
-echo "root:$PASSWORD" | /usr/sbin/chpasswd
+echo "root:$1" | /usr/sbin/chpasswd
 setup-keymap us us
 setup-timezone -z Europe/Berlin
-setup-hostname -n $HOST
+setup-hostname -n $2
 setup-interfaces -i <<EOF
 auto lo
 iface lo inet loopback
 
 auto eth0
 iface eth0 inet dhcp
-	hostname $HOST
+	hostname $2
 EOF
 
 # enable networking and urandom on boot
@@ -34,9 +28,9 @@ rc-update add sshd default 2>/dev/null || true
 
 # shorten 3s boot delay to 0.1s
 sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf
-# make sure to forbid password logins via dropbear
-# (openssh already has this for root by default)
-sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-s"/' /etc/conf.d/dropbear 2>/dev/null || true
+# make sure to forbid password root logins via dropbear
+# (openssh already has this by default)
+sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-g"/' /etc/conf.d/dropbear 2>/dev/null || true
 
 rm /etc/motd
 ####################################################################

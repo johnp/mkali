@@ -1,25 +1,31 @@
 #!/bin/sh
-# Make an Alpine Linux VM image (for insekta)
-# Alpine Linux OS version is set via repositories file (usually latest-stable or edge)
+# Make an Alpine Linux VM image
+# Alpine Linux OS version is set via repositories file (usually latest-stable or edge) in config dir
 set -eu
 
-: ${SCENARIO:="$1"}
-# TODO: parse input conf ($SCENARIO.conf)
-# TODO: sth overwrites $HOSTNAME, so had to resort to $HOST :/
+TARGET="$1"
+if [ ! "$TARGET" ]; then
+	echo "mkali requires a path to the configuration directory as argument"
+	exit 1
+else
+	echo "Building from $TARGET"
+fi
 
-# set scenario name TODO: build from this directory! (needs new git repo)
-: ${SCENARIO:='example'}
+# source target configuration
+[ -f "$TARGET/mkali.conf" ] && . "$TARGET/mkali.conf"
+
+# else, set default configuration
+: ${VM_NAME:=$(basename "$TARGET")}
 : ${IMAGE_FORMAT:='qcow2'}
 : ${IMAGE_SIZE:='200M'}
+: ${ROOTFS:='ext4'}
 : ${KERNEL_FLAVOR:='virt'}
-# add any packages you want here with a new `-p` switch
-# TODO: parse $SCENARIO/packages file
-: ${PACKAGE_ARGS:='-p python3 -p py3-django -p bind-tools -p net-tools'}
-: ${OUTPUT:="$SCENARIO.$IMAGE_FORMAT"}
-: ${POSTINST:="$SCENARIO/mkali.postinst"}
-# set root password and hostname
+: ${OUTPUT:="$VM_NAME.$IMAGE_FORMAT"}
+: ${POSTINST:="$TARGET/mkali.postinst"}
+: ${REPOSITORIES:="$TARGET/etc/apk/repositories"}
+: ${KEYS_DIR:="$TARGET/etc/apk/keys"}
 : ${PASSWORD='password'}
-: ${HOST="$SCENARIO-scenario"}
+# TODO: add all other alpine-make-vm-image options
 
 # alpine-make-vm-image re-downloads the tools *every time* -.-
 # so let's at least re-use them in /tmp
@@ -29,28 +35,29 @@ set -eu
 : ${APK:="/tmp/apk-tools/apk"}
 APK_DIR=$(dirname "$APK")
 # TODO: version check apk binary
-# TODO: somehow this isn't reliable
-echo 'Checking apk-tools...'
-if [ ! -f "$APK" ]; then
-    echo 'Downloading static apk binary...'
-    OLDWD=$(pwd)
-    mkdir -p "$APK_DIR" && cd "$APK_DIR" \
+if ! command -v "$APK" >/dev/null; then
+	echo 'Downloading static apk-tools...'
+	OLDWD=$(pwd)
+	mkdir -p "$APK_DIR" && cd "$APK_DIR" \
 	  && wget --no-verbose "$APK_TOOLS_URI" \
 	  && echo "$APK_TOOLS_SHA256  ${APK_TOOLS_URI##*/}" | sha256sum -c \
 	  && tar --strip-components=1 -xzf "${APK_TOOLS_URI##*/}" \
 	  && rm "${APK_TOOLS_URI##*/}"
-    cd "$OLDWD"
+	cd "$OLDWD"
 fi
 
-# also, let's cache the packages like mkosi.cache
+# parse $SCENARIO/packages
+PACKAGE_ARGS=$(sed -e 's/^/-p /g' "$TARGET/packages" | tr '\n' ' ')
+
+# cache the packages
 : ${APK_CACHE:="./mkali.cache"}
-sudo mkdir -p $APK_CACHE
+sudo mkdir -p "$APK_CACHE"
 # sudo required for nbd mounts :/
-# TODO: upstream `--no-root` option with libguestfs
+# TODO: move always needed postinst stuff here and combine with user provided postinst
 sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
-	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
-	-r "$SCENARIO/repositories" --keys-dir "$SCENARIO/etc/apk/keys/" --script-chroot \
-	"$OUTPUT" "$POSTINST" "$PASSWORD" "$HOST"
+	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" --rootfs "$ROOTFS" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
+	-r "$REPOSITORIES" --keys-dir "$KEYS_DIR" --script-chroot \
+	-- "$OUTPUT" "$POSTINST" "$PASSWORD" "$VM_NAME"
 # fix ownership for qemu
 i=$(whoami)
 sudo chown "$i":"$i" "$OUTPUT"

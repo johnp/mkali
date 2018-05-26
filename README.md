@@ -6,7 +6,5 @@ This project currently is just a simple wrapper around alpinelinux/alpine-make-v
 ## TODO
 
 - [ ] Parse `$SCENARIO/packages` file (currently packages have to be added to the mkali script directly)
-- [ ] Implement root-less mode via [libguestfs](https://libguestfs.org)
-   (libguestfs is not packaged for alpine yet)
 - [ ] Implement [mkosi](https://github.com/systemd/mkosi) like config file parsing
 - [ ] Upstream apk-tool and apk package caching

@@ -10,25 +10,31 @@ if [ ! -d "$TARGET" ]; then
 fi
 echo "Building $TARGET"
 
-# source target configuration
+# source target configuration (unsafe!)
 [ -f "$TARGET/mkali.conf" ] && . "$TARGET/mkali.conf"
 
 # else, set default configuration
+# TODO: document all those options
 : ${VM_NAME:=$(basename "$TARGET")}
 : ${IMAGE_FORMAT:='qcow2'}
 : ${IMAGE_SIZE:='200M'}
 : ${ROOTFS:='ext4'}
 : ${KERNEL_FLAVOR:='virt'}
 : ${OUTPUT:="$VM_NAME.$IMAGE_FORMAT"}
-: ${POSTINST:="$TARGET/mkali.postinst"}
-: ${REPOSITORIES:="$TARGET/etc/apk/repositories"}
-: ${KEYS_DIR:="$TARGET/etc/apk/keys"}
 : ${PASSWORD='password'}
+# System Timezone, e.g. UTC or Europe/Berlin
+: ${TIMEZONE='UTC'}
+# Keymap layout and variant
+: ${KEYMAP='us us'}
 # TODO: add all other alpine-make-vm-image options
 
-# alpine-make-vm-image re-downloads the tools *every time* -.-
+# TODO: possibly make these fixed/auto-generate repositories file or keys dir
+: ${REPOSITORIES:="$TARGET/etc/apk/repositories"}
+: ${KEYS_DIR:="$TARGET/etc/apk/keys"}
+
+# alpine-make-vm-image re-downloads the tools *every time*,
 # so let's at least re-use them in /tmp
-# TODO: upstream this (maybe combined with apk cache)
+# TODO: upstream this (maybe combined with apk package cache)
 : ${APK_TOOLS_URI:="https://github.com/alpinelinux/apk-tools/releases/download/v2.9.1/apk-tools-2.9.1-x86_64-linux.tar.gz"}
 : ${APK_TOOLS_SHA256:="a0546d814a85fcc94a6e560360c4f1997119e40d79d9bc818f1571b2cf2ea5e9"}
 : ${APK:="/tmp/apk-tools/apk"}
@@ -45,6 +51,54 @@ if ! command -v "$APK" >/dev/null; then
 	cd "$OLDWD"
 fi
 
+# execute initial system configuration script before user provided mkali.postinst
+# TODO: cleanup trap
+SETUP_SCRIPT=$(mktemp "$TARGET/mkali.setup.XXXX")
+chmod +x "$SETUP_SCRIPT"
+# TODO: verify hostname is sent in DHCP request
+cat >"$SETUP_SCRIPT" <<_EOF_
+#!/bin/sh
+# Initial system setup
+set -eu
+
+echo "root:$PASSWORD" | /usr/sbin/chpasswd
+setup-hostname -n $VM_NAME
+setup-timezone -z $TIMEZONE
+setup-keymap $KEYMAP
+setup-interfaces -i <<EOF
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+	hostname $VM_NAME
+EOF
+
+# enable networking and urandom on boot
+rc-update add networking boot
+rc-update add urandom boot
+# react to ACPI events sent by the hypervisor
+rc-update add acpid default
+# enable ssh server if installed
+#rc-update add dropbear default 2>/dev/null || true
+rc-update add dropbear default || true
+rc-update add sshd default || true
+
+rm /etc/motd
+# shorten 3s boot delay to 0.1s
+sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf || true
+# make sure to forbid root password logins via dropbear
+# (openssh already has this by default)
+[ -d '/etc/conf.d/dropbear' ] && sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-g"/' /etc/conf.d/dropbear || true
+
+# copy directory tree under /mnt to / (excluding files directly in /mnt, e.g. this script)
+find . -type d -mindepth 1 -maxdepth 1 -exec cp -r -- {} / \;
+
+# execute user provided mkosi.postinst
+[ -f '/mnt/mkali.postinst' ] && echo "Executing postinst" ; exec '/mnt/mkali.postinst'
+exit 0
+_EOF_
+
 # convert $PACKAGES config entry to $PACKAGE_ARGS
 PACKAGE_ARGS=$(echo "$PACKAGES" | sed -e 's/\([[:space:]]\+\|^\)\(.\)/ -p \2/g')
 
@@ -56,7 +110,9 @@ sudo mkdir -p "$APK_CACHE"
 sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
 	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" --rootfs "$ROOTFS" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
 	-r "$REPOSITORIES" --keys-dir "$KEYS_DIR" --script-chroot \
-	-- "$OUTPUT" "$POSTINST" "$PASSWORD" "$VM_NAME"
+	-- "$OUTPUT" "$SETUP_SCRIPT"
+# remove auto-generated setup script
+rm "$SETUP_SCRIPT"
 # fix ownership for qemu
 i=$(whoami)
 sudo chown "$i":"$i" "$OUTPUT"

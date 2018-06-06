@@ -6,6 +6,6 @@ This project currently is just a simple wrapper around alpinelinux/alpine-make-v
 ## TODO
 
 - [x] Implement config file sourcing
-- [ ] Move generic postinst stuff with 'mkosi.extra'-like functionality into mkali directly, so that user provided postinst can be simpler
+- [x] Move generic postinst stuff with 'mkosi.extra'-like functionality into mkali directly, so that user provided postinst can be simpler
 - [ ] Support `VERSION` in `mkali.conf` that generates `repositories` file automatically from template
 - [ ] Upstream apk-tool and apk package caching

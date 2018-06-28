@@ -3,11 +3,14 @@
 # Alpine Linux OS version is set via repositories file (usually latest-stable or edge) in config dir
 set -eu
 
-TARGET="$1"
-if [ ! -d "$TARGET" ]; then
+# Pull alpine-make-vm-image git submodule
+git submodule update --init --recursive
+
+if [ "$#" -ne "1" ] || [ ! -d "$1" ]; then
 	echo "mkali requires a path to the configuration directory as argument"
 	exit 1
 fi
+TARGET="$1"
 echo "Building $TARGET"
 
 # source target configuration (unsafe!)

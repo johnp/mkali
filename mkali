@@ -35,6 +35,8 @@ echo "Building $TARGET"
 : ${REPOSITORIES:="$TARGET/etc/apk/repositories"}
 : ${KEYS_DIR:="$TARGET/etc/apk/keys"}
 
+# TODO: check if target file already exists and confirm overwrite/deletion / have -f/--force flag (look at mkosi)
+
 # alpine-make-vm-image re-downloads the tools *every time*,
 # so let's at least re-use them in /tmp
 # TODO: upstream this (maybe combined with apk package cache)
@@ -54,8 +56,15 @@ if ! command -v "$APK" >/dev/null; then
 	cd "$OLDWD"
 fi
 
+# Clean up on error
+cleanup() {
+  set +eu
+  trap '' EXIT HUP INT TERM # unset trap to avoid loop
+  [ -f "$SETUP_SCRIPT" ] && rm "$SETUP_SCRIPT"
+}
+trap cleanup EXIT HUP INT TERM
+
 # execute initial system configuration script before user provided mkali.postinst
-# TODO: cleanup trap
 SETUP_SCRIPT=$(mktemp "$TARGET/mkali.setup.XXXX")
 chmod +x "$SETUP_SCRIPT"
 # TODO: verify hostname is sent in DHCP request
@@ -83,16 +92,15 @@ rc-update add urandom boot
 # react to ACPI events sent by the hypervisor
 rc-update add acpid default
 # enable ssh server if installed
-#rc-update add dropbear default 2>/dev/null || true
-rc-update add dropbear default || true
-rc-update add sshd default || true
+[ -f '/etc/conf.d/sshd' ] && rc-update add sshd default
+[ -f '/etc/conf.d/dropbear' ] && rc-update add dropbear default
 
-rm /etc/motd
-# shorten 3s boot delay to 0.1s
-sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf || true
 # make sure to forbid root password logins via dropbear
 # (openssh already has this by default)
-[ -d '/etc/conf.d/dropbear' ] && sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-g"/' /etc/conf.d/dropbear || true
+[ -f '/etc/conf.d/dropbear' ] && sed -i -e 's/DROPBEAR_OPTS=""/DROPBEAR_OPTS="-g"/' /etc/conf.d/dropbear || true
+# shorten 3s boot delay to 0.1s
+sed -i -e 's/TIMEOUT 30/TIMEOUT 1/' /boot/extlinux.conf || true
+rm /etc/motd
 
 # copy directory tree under /mnt to / (excluding files directly in /mnt, e.g. this script)
 find . -type d -mindepth 1 -maxdepth 1 -exec cp -r -- {} / \;
@@ -114,8 +122,8 @@ sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm
 	-r "$REPOSITORIES" --keys-dir "$KEYS_DIR" --script-chroot \
 	-- "$OUTPUT" "$SETUP_SCRIPT"
 # remove auto-generated setup script
-rm "$SETUP_SCRIPT"
-# fix ownership for qemu
+[ -f "$SETUP_SCRIPT" ] && rm "$SETUP_SCRIPT"
+# fix image file ownership for qemu
 i=$(whoami)
 sudo chown "$i":"$i" "$OUTPUT"
 

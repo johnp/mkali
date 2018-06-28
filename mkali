@@ -108,8 +108,7 @@ PACKAGE_ARGS=$(echo "$PACKAGES" | sed -e 's/\([[:space:]]\+\|^\)\(.\)/ -p \2/g')
 # cache the packages
 : ${APK_CACHE:="./mkali.cache"}
 sudo mkdir -p "$APK_CACHE"
-# sudo required for nbd mounts :/
-# TODO: move always needed postinst stuff here and combine with user provided postinst
+# root required for nbd mounts :/
 sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
 	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" --rootfs "$ROOTFS" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
 	-r "$REPOSITORIES" --keys-dir "$KEYS_DIR" --script-chroot \

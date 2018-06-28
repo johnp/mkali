@@ -3,6 +3,14 @@
 
 This project currently is just a simple wrapper around alpinelinux/alpine-make-vm-image to easily make VM images. It caches the apk-tool, as well as the packages by default, so that subsequent builds are quicker. The intention is to upstream some these changes prototyped here.
 
+## USAGE
+
+Simply pull this git repo and execute `./mkali $TARGET`, where `$TARGET` is a path to the directory containing your `mkali.conf`. Available config options can be found at the top of the `mkali` script.  
+The `example` directory contains a simple build that includes an OpenRC service file in `etc/init.d/`, a program in `opt/` and an `mkali.postinst` script that sets up a new user account (which includes giving the user ownership to the program folder) and enables the service.  
+The `etc/apk/` directory is needed in every build directory for now, so that apk has access to the alpine GPG keys as well as to the repositories file, in which the user can change the Alpine Linux version (usually latest-stable or edge).
+
+Top level directories in the `$TARGET` directory are recursively copied into the image before the postinst step.
+
 ## TODO
 
 - [x] Implement config file sourcing

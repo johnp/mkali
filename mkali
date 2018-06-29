@@ -56,10 +56,9 @@ if ! command -v "$APK" >/dev/null; then
 	cd "$OLDWD"
 fi
 
-# Clean up on error
 cleanup() {
   set +eu
-  trap '' EXIT HUP INT TERM # unset trap to avoid loop
+  trap '' EXIT HUP INT TERM
   [ -f "$SETUP_SCRIPT" ] && rm "$SETUP_SCRIPT"
 }
 trap cleanup EXIT HUP INT TERM
@@ -121,8 +120,7 @@ sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm
 	-f "$IMAGE_FORMAT" -s "$IMAGE_SIZE" --rootfs "$ROOTFS" -k "$KERNEL_FLAVOR" $PACKAGE_ARGS \
 	-r "$REPOSITORIES" --keys-dir "$KEYS_DIR" --script-chroot \
 	-- "$OUTPUT" "$SETUP_SCRIPT"
-# remove auto-generated setup script
-[ -f "$SETUP_SCRIPT" ] && rm "$SETUP_SCRIPT"
+cleanup
 # fix image file ownership for qemu
 i=$(whoami)
 sudo chown "$i":"$i" "$OUTPUT"

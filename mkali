@@ -31,11 +31,20 @@ echo "Building $TARGET"
 : ${KEYMAP='us us'}
 # TODO: add all other alpine-make-vm-image options
 
+# TODO: -f/--force flag like mkosi
+if [ -f "$OUTPUT" ]; then
+  echo -n "$OUTPUT already exists. Overwrite (y/N)? "
+  read -r yesno
+  if [ "$yesno" = 'y' ] || [ "$yesno" = 'Y' ]; then
+    rm "$OUTPUT"
+  else
+    exit 0
+  fi
+fi
+
 # TODO: possibly make these fixed/auto-generate repositories file or keys dir
 : ${REPOSITORIES:="$TARGET/etc/apk/repositories"}
 : ${KEYS_DIR:="$TARGET/etc/apk/keys"}
-
-# TODO: check if target file already exists and confirm overwrite/deletion / have -f/--force flag (look at mkosi)
 
 # alpine-make-vm-image re-downloads the tools *every time*,
 # so let's at least re-use them in /tmp

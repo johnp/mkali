@@ -113,7 +113,7 @@ _EOF_
 PACKAGE_ARGS=$(echo "$PACKAGES" | sed -e 's/\([[:space:]]\+\|^\)\(.\)/ -p \2/g')
 
 # cache the packages
-: ${APK_CACHE:="./mkali.cache"}
+: ${APK_CACHE:="$PWD/mkali.cache"}
 sudo mkdir -p "$APK_CACHE"
 # root required for nbd mounts :/
 sudo APK="$APK" APK_OPTS="--no-progress --cache-dir $APK_CACHE" ./alpine-make-vm-image/alpine-make-vm-image \
